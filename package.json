@@ -1,0 +1,23 @@
+{
+  "name": "pi-rich-renderer",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Pi extension that renders LaTeX formulas as terminal images while preserving original LLM context.",
+  "main": "index.ts",
+  "files": [
+    "index.ts",
+    "README.md"
+  ],
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^24.3.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck index.ts"
+  }
+}
