@@ -68,12 +68,20 @@ Project paths resolve from the current session's working directory.
 {
   "richRenderer": {
     "imageScale": 0.5,
+    "imageAlign": "center",
     "cacheTtlMs": 604800000
   }
 }
 ```
 
 - `imageScale`: 0.1–2, default 0.5.
+- `imageAlign`: `"left"` (default, preserves previous behavior) or `"center"`.
+  Centering uses the actual rendered image width and the current Pi pane's
+  available content width, respecting Pi's `outputPad` setting. It recalculates
+  on resize and moves the whole formula, preserving internal equation alignment.
+  It changes terminal placement only: no transparent PNG padding, image resizing,
+  cache invalidation or extra TeX compilation. Centering is cell-aligned, so left
+  and right margins can differ by one terminal column.
 - `cacheTtlMs`: 0–31536000000, default 7 days; 0 disables age-based pruning.
 - `terminal.showImages: false` also disables this extension's images.
 - `PI_RICH_RENDER_TIMEOUT_MS`: per-process wall timeout, 100–15000 ms, default 5000.

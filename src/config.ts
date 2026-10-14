@@ -1,8 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+export type ImageAlign = "left" | "center";
 export interface Config {
 	imageScale: number;
+	imageAlign: ImageAlign;
+	outputPad: 0 | 1;
 	cacheTtlMs: number;
 	timeoutMs: number;
 	dpi: number;
@@ -27,6 +30,8 @@ export async function loadConfig(agentDir: string, cwd: string, trusted: boolean
 	const terminal = { ...object(global.terminal), ...object(project.terminal) };
 	return {
 		imageScale: bounded(options.imageScale, 0.5, 0.1, 2),
+		imageAlign: options.imageAlign === "center" ? "center" : "left",
+		outputPad: (project.outputPad ?? global.outputPad) === 0 ? 0 : 1,
 		cacheTtlMs: bounded(options.cacheTtlMs, 604800000, 0, 31536000000),
 		timeoutMs: bounded(Number(process.env.PI_RICH_RENDER_TIMEOUT_MS), 5000, 100, 15000),
 		dpi: bounded(Number(process.env.PI_RICH_RENDER_LATEX_DPI), 180, 72, 300),

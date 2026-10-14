@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionContext, MarkdownTransformer } from "@earendil-works/pi-coding-agent";
@@ -12,6 +12,7 @@ test("extension registers display-only hooks and leaves messages untouched in ev
 	const previous = process.env.PI_CODING_AGENT_DIR;
 	process.env.PI_CODING_AGENT_DIR = root;
 	try {
+		await writeFile(join(root, "settings.json"), JSON.stringify({ richRenderer: { imageAlign: "center" }, outputPad: 1 }));
 		const handlers = new Map<string, (event: unknown, ctx: ExtensionContext) => unknown>();
 		const state: { transformer?: MarkdownTransformer } = {};
 		const pi = {
@@ -38,8 +39,12 @@ test("extension registers display-only hooks and leaves messages untouched in ev
 			await handlers.get("session_start")!({}, ctx);
 			assert.equal(await handlers.get("message_end")!({ message }, ctx), undefined);
 			const shown = state.transformer!("$$x$$", { messageType: "assistant", isStreaming: false, availableWidth: 80 });
-			if (render) assert.ok(shown.includes("\x1b_G"), notices.join("\n"));
-			else assert.equal(shown, "$$x$$");
+			if (render) {
+				assert.ok(shown.includes("\x1b_G"), notices.join("\n"));
+				const columns = Number(/,c=(\d+)/.exec(shown)?.[1]);
+				const offset = 1 + Math.floor((80 - columns) / 2);
+				assert.ok(shown.includes(`\x1b[${offset}C\x1b_G`), "configured alignment and Markdown padding reach the display transformer");
+			} else assert.equal(shown, "$$x$$");
 			assert.deepEqual(notices, []);
 			assert.equal(state.transformer!("$$x$$", { messageType: "user", isStreaming: false, availableWidth: 80 }), "$$x$$");
 			assert.equal(state.transformer!("$$x$$", { messageType: "assistant", isStreaming: true, availableWidth: 80 }), "$$x$$");

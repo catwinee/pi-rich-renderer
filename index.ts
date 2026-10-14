@@ -21,7 +21,7 @@ export default function (pi: ExtensionAPI) {
 	// custom session field, persisted PNG, or terminal escape in the conversation.
 	pi.registerMarkdownTransformer((markdown, context) => {
 		if (!active || active.mode !== "tui" || !config?.showImages || context.messageType !== "assistant" || context.isStreaming) return markdown;
-		return display.transform(markdown, context.availableWidth, active.ui.theme, config.imageScale, config.dpi);
+		return display.transform(markdown, context.availableWidth, active.ui.theme, config.imageScale, config.dpi, config.imageAlign, config.outputPad);
 	});
 
 	async function prepare(texts: string[], ctx: ExtensionContext): Promise<void> {
