@@ -1,23 +1,32 @@
 {
   "name": "pi-rich-renderer",
-  "version": "0.1.0",
-  "private": false,
+  "version": "0.2.0",
+  "private": true,
   "type": "module",
-  "description": "Pi extension that renders LaTeX formulas as terminal images while preserving original LLM context.",
-  "main": "index.ts",
-  "files": [
-    "index.ts",
-    "README.md"
-  ],
-  "dependencies": {
+  "description": "Display-only, sandboxed LaTeX formula images for Pi.",
+  "repository": { "type": "git", "url": "git+https://github.com/catwinee/pi-rich-renderer.git" },
+  "files": ["index.ts", "src", "README.md", "AUDIT.md"],
+  "pi": { "extensions": ["./index.ts"] },
+  "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.1.0",
+    "@earendil-works/pi-tui": "1.1.0",
     "typescript": "^5.7.3",
-    "@types/node": "^24.3.0"
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.0"
+  },
+  "overrides": {
+    "@earendil-works/pi-codemode": "1.1.0",
+    "@earendil-works/pi-agent-core": "1.1.0",
+    "@earendil-works/pi-ai": "1.1.0"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck index.ts"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "test:integration": "PI_RICH_TEST_TEX=1 tsx --test test/*.test.ts",
+    "check": "npm run typecheck && npm test"
   }
 }
