@@ -20,6 +20,36 @@ test("alignment defaults to left; invalid values cannot inject terminal controls
 		}
 	} finally { await rm(dir, { recursive: true, force: true }); }
 });
+test("DPI settings are bounded, trust-aware and overridden only by a valid environment value", async () => {
+	const root = await mkdtemp(join(tmpdir(), "rich-dpi-config-"));
+	const previous = process.env.PI_RICH_RENDER_LATEX_DPI;
+	try {
+		delete process.env.PI_RICH_RENDER_LATEX_DPI;
+		const agent = join(root, "agent"), cwd = join(root, "project");
+		await mkdir(agent); await mkdir(join(cwd, ".pi"), { recursive: true });
+		assert.equal((await loadConfig(agent, cwd, false)).dpi, 180);
+		for (const value of [null, true, "300", 0, 71, 301]) {
+			await writeFile(join(agent, "settings.json"), JSON.stringify({ richRenderer: { latexDpi: value } }));
+			assert.equal((await loadConfig(agent, cwd, false)).dpi, 180);
+		}
+		await writeFile(join(agent, "settings.json"), JSON.stringify({ richRenderer: { latexDpi: 300 } }));
+		await writeFile(join(cwd, ".pi/settings.json"), JSON.stringify({ richRenderer: { latexDpi: 240 } }));
+		assert.equal((await loadConfig(agent, cwd, false)).dpi, 300);
+		assert.equal((await loadConfig(agent, cwd, true)).dpi, 240);
+		for (const value of ["", "invalid", "Infinity", "71", "301"]) {
+			process.env.PI_RICH_RENDER_LATEX_DPI = value;
+			assert.equal((await loadConfig(agent, cwd, true)).dpi, 240);
+		}
+		for (const value of ["72", "180", "300"]) {
+			process.env.PI_RICH_RENDER_LATEX_DPI = value;
+			assert.equal((await loadConfig(agent, cwd, true)).dpi, Number(value));
+		}
+	} finally {
+		if (previous === undefined) delete process.env.PI_RICH_RENDER_LATEX_DPI;
+		else process.env.PI_RICH_RENDER_LATEX_DPI = previous;
+		await rm(root, { recursive: true, force: true });
+	}
+});
 test("project settings require trust and resolve relative to current context", async () => {
 	const root = await mkdtemp(join(tmpdir(), "rich-config-"));
 	try {

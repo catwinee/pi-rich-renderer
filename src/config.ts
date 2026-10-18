@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+// Preserve the original 180-DPI display size while raster quality changes.
+export const DISPLAY_DPI = 180;
 export type ImageAlign = "left" | "center";
 export interface Config {
 	imageScale: number;
@@ -34,7 +36,7 @@ export async function loadConfig(agentDir: string, cwd: string, trusted: boolean
 		outputPad: (project.outputPad ?? global.outputPad) === 0 ? 0 : 1,
 		cacheTtlMs: bounded(options.cacheTtlMs, 604800000, 0, 31536000000),
 		timeoutMs: bounded(Number(process.env.PI_RICH_RENDER_TIMEOUT_MS), 5000, 100, 15000),
-		dpi: bounded(Number(process.env.PI_RICH_RENDER_LATEX_DPI), 180, 72, 300),
+		dpi: bounded(Number(process.env.PI_RICH_RENDER_LATEX_DPI), bounded(options.latexDpi, DISPLAY_DPI, 72, 300), 72, 300),
 		showImages: terminal.showImages !== false,
 	};
 }

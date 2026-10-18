@@ -1,7 +1,7 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { allocateImageId, getCapabilities, getCellDimensions, getImageDimensions, renderImage } from "@earendil-works/pi-tui";
 import { cacheKey } from "./cache.ts";
-import type { ImageAlign } from "./config.ts";
+import { DISPLAY_DPI, type ImageAlign } from "./config.ts";
 import { splitMath } from "./math.ts";
 
 export type Palette = Pick<Theme, "appearance" | "getFgAnsi">;
@@ -53,12 +53,15 @@ export class DisplayStore {
 			const dimensions = getImageDimensions(prepared.png, "image/png");
 			if (!dimensions) return segment.source;
 			const cell = getCellDimensions();
+			// DPI controls sampling quality, not terminal size. Keep imageScale in
+			// 180-DPI logical pixels so higher-resolution PNGs do not grow on screen.
+			const displayScale = scale * DISPLAY_DPI / dpi;
 			// Markdown already caches output by width. Allocate a distinct placement per
 			// occurrence rather than sharing one Kitty image ID across the transcript.
 			const image = renderImage(prepared.png, dimensions, {
 				// Match Image.render's two-column width allowance to preserve sizing.
-				maxWidthCells: Math.max(1, Math.min(width - 2, Math.ceil(dimensions.widthPx / cell.widthPx * scale))),
-				maxHeightCells: Math.max(1, Math.min(40, Math.ceil(dimensions.heightPx / cell.heightPx * scale))),
+				maxWidthCells: Math.max(1, Math.min(width - 2, Math.ceil(dimensions.widthPx / cell.widthPx * displayScale))),
+				maxHeightCells: Math.max(1, Math.min(40, Math.ceil(dimensions.heightPx / cell.heightPx * displayScale))),
 				imageId: allocateImageId(),
 				moveCursor: false,
 			});

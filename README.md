@@ -67,14 +67,18 @@ Project paths resolve from the current session's working directory.
 ```json
 {
   "richRenderer": {
-    "imageScale": 0.5,
+    "imageScale": 1.0,
     "imageAlign": "center",
+    "latexDpi": 300,
     "cacheTtlMs": 604800000
   }
 }
 ```
 
-- `imageScale`: 0.1–2, default 0.5.
+- `imageScale`: 0.1–2, default 0.5, relative to the original 180-DPI logical size.
+  Display size is independent of raster DPI (up to pixel/cell rounding).
+- `latexDpi`: 72–300, default 180. Higher values produce more source pixels,
+  not larger formulas. A valid `PI_RICH_RENDER_LATEX_DPI` overrides this setting.
 - `imageAlign`: `"left"` (default, preserves previous behavior) or `"center"`.
   Centering uses the actual rendered image width and the current Pi pane's
   available content width, respecting Pi's `outputPad` setting. It recalculates
@@ -85,8 +89,26 @@ Project paths resolve from the current session's working directory.
 - `cacheTtlMs`: 0–31536000000, default 7 days; 0 disables age-based pruning.
 - `terminal.showImages: false` also disables this extension's images.
 - `PI_RICH_RENDER_TIMEOUT_MS`: per-process wall timeout, 100–15000 ms, default 5000.
-- `PI_RICH_RENDER_LATEX_DPI`: 72–300, default 180.
+- `PI_RICH_RENDER_LATEX_DPI`: 72–300, defaults to `latexDpi`.
 - Reload after changing configuration. Invalid values use defaults.
+
+### Only-eDP calibration
+
+The example above is the **only-eDP laptop** preset: `imageScale: 1.0`,
+`latexDpi: 300`, with centered placement. It replaces this machine's previous
+`imageScale: 1.5` / 180-DPI setup: unconstrained formulas are approximately two
+thirds as wide/high, while the PNG has 5/3 as many pixels along each axis.
+This is a manually selected preset, not connector detection. TODO (only eDP):
+calibrate external-monitor scaling separately before adding display-aware profiles.
+Reload after applying it; terminal font size/cell metrics still affect the result.
+
+Raising DPI from 180 to 300 gives roughly 2.78× the raw pixel count, **not**
+necessarily 2.78× the rendering time: TeX layout and sandbox startup are largely
+unchanged; rasterization, PNG encoding and transfer do grow. PNG compression,
+formula complexity and terminal resampling determine the actual cost/clarity.
+Existing DPI-specific caches are reused; a new DPI requires a first compilation.
+No cache deletion is needed. DPI no longer implicitly magnifies formulas, so users
+who relied on that behavior should adjust `imageScale` explicitly.
 
 ## Bounds and cache
 
