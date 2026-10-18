@@ -67,7 +67,7 @@ Project paths resolve from the current session's working directory.
 ```json
 {
   "richRenderer": {
-    "imageScale": 1.0,
+    "imageScale": 0.8,
     "imageAlign": "center",
     "latexDpi": 300,
     "cacheTtlMs": 604800000
@@ -94,10 +94,10 @@ Project paths resolve from the current session's working directory.
 
 ### Only-eDP calibration
 
-The example above is the **only-eDP laptop** preset: `imageScale: 1.0`,
+The example above is the **only-eDP laptop** preset: `imageScale: 0.8`,
 `latexDpi: 300`, with centered placement. It replaces this machine's previous
-`imageScale: 1.5` / 180-DPI setup: unconstrained formulas are approximately two
-thirds as wide/high, while the PNG has 5/3 as many pixels along each axis.
+`imageScale: 1.5` / 180-DPI setup: unconstrained formulas are approximately 53%
+as wide/high, while the PNG has 5/3 as many pixels along each axis.
 This is a manually selected preset, not connector detection. TODO (only eDP):
 calibrate external-monitor scaling separately before adding display-aware profiles.
 Reload after applying it; terminal font size/cell metrics still affect the result.
