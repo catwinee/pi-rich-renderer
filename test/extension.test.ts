@@ -4,22 +4,27 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionContext, MarkdownTransformer } from "@earendil-works/pi-coding-agent";
-import { setCapabilities } from "@earendil-works/pi-tui";
+import { getCellDimensions, setCellDimensions, setCapabilities } from "@earendil-works/pi-tui";
 import extension from "../index.ts";
 
 test("extension registers display-only hooks and leaves messages untouched in every mode", async () => {
 	const root = await mkdtemp(join(tmpdir(), "rich-extension-test-"));
 	const previous = process.env.PI_CODING_AGENT_DIR;
+	const originalCell = getCellDimensions();
+	setCellDimensions({ widthPx: 9, heightPx: 18 });
 	process.env.PI_CODING_AGENT_DIR = root;
 	try {
-		await writeFile(join(root, "settings.json"), JSON.stringify({ richRenderer: { imageAlign: "center" }, outputPad: 1 }));
+		await writeFile(join(root, "settings.json"), JSON.stringify({ richRenderer: { imageAlign: "center", imageSizing: "font", fontScale: 1.2 }, outputPad: 1 }));
 		const handlers = new Map<string, (event: unknown, ctx: ExtensionContext) => unknown>();
 		const state: { transformer?: MarkdownTransformer } = {};
+		const commands: string[] = [];
 		const pi = {
+			registerCommand: (name: string) => { commands.push(name); },
 			on: (name: string, handler: (event: unknown, ctx: ExtensionContext) => unknown) => { handlers.set(name, handler); return () => {}; },
 			registerMarkdownTransformer: (transformer: MarkdownTransformer) => { state.transformer = transformer; },
 		} as unknown as ExtensionAPI;
 		extension(pi);
+		assert.deepEqual(commands, ["formula-status"]);
 		assert.deepEqual([...handlers.keys()], ["session_start", "message_end", "session_shutdown"]);
 		assert.ok(state.transformer);
 		setCapabilities({ images: null, trueColor: true, hyperlinks: true });
@@ -44,6 +49,10 @@ test("extension registers display-only hooks and leaves messages untouched in ev
 				const columns = Number(/,c=(\d+)/.exec(shown)?.[1]);
 				const offset = 1 + Math.floor((80 - columns) / 2);
 				assert.ok(shown.includes(`\x1b[${offset}C\x1b_G`), "configured alignment and Markdown padding reach the display transformer");
+				setCellDimensions({ widthPx: 18, heightPx: 36 });
+				const zoomed = state.transformer!("$$x$$", { messageType: "assistant", isStreaming: false, availableWidth: 80 });
+				assert.equal(zoomed.replace(/i=\d+/g, "i=ID"), shown.replace(/i=\d+/g, "i=ID"), "configured font sizing reaches the transformer and survives density changes");
+				setCellDimensions({ widthPx: 9, heightPx: 18 });
 			} else assert.equal(shown, "$$x$$");
 			assert.deepEqual(notices, []);
 			assert.equal(state.transformer!("$$x$$", { messageType: "user", isStreaming: false, availableWidth: 80 }), "$$x$$");
@@ -63,6 +72,7 @@ test("extension registers display-only hooks and leaves messages untouched in ev
 		assert.equal(message.content[0].thinkingSignature, "signature");
 		assert.equal(message.content[1].text, "$$x$$");
 	} finally {
+		setCellDimensions(originalCell);
 		if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
 		else process.env.PI_CODING_AGENT_DIR = previous;
 		await rm(root, { recursive: true, force: true });

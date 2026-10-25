@@ -68,7 +68,8 @@ Project paths resolve from the current session's working directory.
 ```json
 {
   "richRenderer": {
-    "imageScale": 0.8,
+    "imageSizing": "font",
+    "fontScale": 1.0,
     "imageAlign": "center",
     "latexDpi": 300,
     "cacheTtlMs": 604800000
@@ -76,8 +77,14 @@ Project paths resolve from the current session's working directory.
 }
 ```
 
-- `imageScale`: 0.1–2, default 0.5, relative to the original 180-DPI logical size.
-  Display size is independent of raster DPI (up to pixel/cell rounding).
+- `imageSizing`: `"pixels"` (legacy default) or `"font"` (recommended for mixed-DPI
+  displays). Opt-in preserves existing configurations' meaning.
+- `fontScale`: 0.5–2, default 1. Used only in `"font"` mode. At 1, the TeX base
+  font's em is one terminal row high; actual glyph height depends on the font.
+  Fractions, matrices and multi-line formulas retain their natural extra height.
+- `imageScale`: 0.1–2, default 0.5, used **only** in `"pixels"` mode, relative to
+  the original 180-DPI logical size. It is ignored (not multiplied) in font mode.
+  Both modes decouple display size from raster DPI, up to pixel/cell rounding.
 - `latexDpi`: 72–300, default 180. Higher values produce more source pixels,
   not larger formulas. A valid `PI_RICH_RENDER_LATEX_DPI` overrides this setting.
 - `imageAlign`: `"left"` (default, preserves previous behavior) or `"center"`.
@@ -93,15 +100,45 @@ Project paths resolve from the current session's working directory.
 - `PI_RICH_RENDER_LATEX_DPI`: 72–300, defaults to `latexDpi`.
 - Reload after changing configuration. Invalid values use defaults.
 
-### Only-eDP calibration
+### Consistent sizing across laptop and external displays
 
-The example above is the **only-eDP laptop** preset: `imageScale: 0.8`,
-`latexDpi: 300`, with centered placement. It replaces this machine's previous
-`imageScale: 1.5` / 180-DPI setup: unconstrained formulas are approximately 53%
-as wide/high, while the PNG has 5/3 as many pixels along each axis.
-This is a manually selected preset, not connector detection. TODO (only eDP):
-calibrate external-monitor scaling separately before adding display-aware profiles.
-Reload after applying it; terminal font size/cell metrics still affect the result.
+The example above replaces the old manually selected eDP `imageScale` presets.
+No connector names, monitor profiles, physical millimetres, or compositor-specific
+settings are needed. In font mode the uniform source-to-display scale is:
+
+```text
+fontScale × terminalCellHeightPx × 72.27 / (12 × latexDpi)
+```
+
+The 12pt base font is shared with the TeX document generator. Using the base em,
+rather than the whole PNG height, keeps a matrix's entries the same size as a
+single-line formula. Formula width is still bounded by the pane and height by
+40 rows: very large formulas shrink to fit, so a narrower pane can legitimately
+show a smaller formula.
+
+When the reported terminal pixel density doubles, both the formula pixel size
+and character-cell size double. Their ratio stays constant, even if a terminal
+reports backing-buffer pixels rather than physical output pixels. Different cell
+aspect ratios are recalculated, with transparent padding preserving the formula's
+aspect ratio. This promises a stable formula-to-text proportion, not identical
+millimetres across screens or an exact match between different typefaces.
+
+Pi 1.1 queries character-cell size only at startup. In an interactive Kitty-capable
+TTY, this extension re-queries `CSI 16 t` on resize and every two seconds (also
+catching font/DPI changes that keep the same row/column count). Changed replies
+flow through Pi's own handler, which updates metrics and invalidates cached
+Markdown; identical replies do not cause redraws. Queries pause when Pi releases
+raw mode, and listeners/timers are removed on session shutdown/reload. No stdin
+reader, separate renderer, monitor service, or configuration changes to Herdr are
+installed.
+
+Use `/formula-status` to inspect the sizing mode, DPI, current cell dimensions and
+age of the latest report. Unsupported/no-response terminals keep Pi's existing
+metrics; incorrect or stale upstream **aspect ratios** cannot be repaired by this
+extension. The installed Herdr 0.9.4 was checked with an isolated PTY at a fixed
+100×30 grid: 9×18 → 23×47 → 31×63 → 16×31 cell changes all reached the inner pane.
+Physical cross-monitor Ghostty testing is still needed; only eDP was connected
+at implementation time.
 
 Short formulas are fitted uniformly, then surrounded by transparent PNG padding
 to fill the reserved character cells. The unused height of a terminal row must
@@ -117,7 +154,8 @@ unchanged; rasterization, PNG encoding and transfer do grow. PNG compression,
 formula complexity and terminal resampling determine the actual cost/clarity.
 Existing DPI-specific caches are reused; a new DPI requires a first compilation.
 No cache deletion is needed. DPI no longer implicitly magnifies formulas, so users
-who relied on that behavior should adjust `imageScale` explicitly.
+who relied on that behavior should adjust `imageScale` in pixel mode or
+`fontScale` in font mode explicitly.
 
 ## Bounds and cache
 

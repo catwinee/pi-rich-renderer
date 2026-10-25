@@ -1,3 +1,5 @@
+// Shared with font-relative display sizing; TeX uses 72.27 pt per inch.
+export const LATEX_FONT_PT = 12;
 export type Segment = { type: "text" | "math"; source: string };
 
 const environments = /^(equation|align|gather|multline|flalign|alignat)\*?$/;
@@ -80,7 +82,7 @@ export function latexDocument(source: string): string {
 	else if (source.startsWith("\\(")) { tex = source.slice(2, -2); display = false; }
 	else if (source.startsWith("$")) { tex = source.slice(1, -1); display = false; }
 	const body = source.startsWith("\\begin{") ? tex : `\\(${display ? "\\displaystyle " : ""}${tex}\\)`;
-	return String.raw`\documentclass[12pt]{article}
+	return String.raw`\documentclass[${LATEX_FONT_PT}pt]{article}
 \usepackage[active,tightpage]{preview}
 \usepackage{amsmath,amssymb,mathtools,bm}
 \setlength\PreviewBorder{2pt}

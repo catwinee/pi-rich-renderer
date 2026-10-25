@@ -9,6 +9,28 @@ test("rejects coercion, NaN, infinity and out-of-range values", () => {
 	for (const value of [null, true, "1", NaN, Infinity, -1, 100]) assert.equal(bounded(value, 0.5, 0.1, 2), 0.5);
 	assert.equal(bounded(1, 0.5, 0.1, 2), 1);
 });
+test("font-relative sizing is opt-in, bounded and trust-aware without reinterpreting imageScale", async () => {
+	const root = await mkdtemp(join(tmpdir(), "rich-font-config-"));
+	try {
+		const agent = join(root, "agent"), cwd = join(root, "project");
+		await mkdir(agent); await mkdir(join(cwd, ".pi"), { recursive: true });
+		assert.equal((await loadConfig(agent, cwd, false)).imageSizing, "pixels");
+		assert.equal((await loadConfig(agent, cwd, false)).fontScale, 1);
+		await writeFile(join(agent, "settings.json"), JSON.stringify({ richRenderer: { imageSizing: "font", fontScale: 1.2, imageScale: 2 } }));
+		await writeFile(join(cwd, ".pi/settings.json"), JSON.stringify({ richRenderer: { imageSizing: "pixels", fontScale: 0.8 } }));
+		assert.equal((await loadConfig(agent, cwd, false)).imageSizing, "font");
+		assert.equal((await loadConfig(agent, cwd, false)).fontScale, 1.2);
+		assert.equal((await loadConfig(agent, cwd, false)).imageScale, 2);
+		assert.equal((await loadConfig(agent, cwd, true)).imageSizing, "pixels");
+		assert.equal((await loadConfig(agent, cwd, true)).fontScale, 0.8);
+		for (const value of [null, "1", true, 0.49, 2.01]) {
+			await writeFile(join(agent, "settings.json"), JSON.stringify({ richRenderer: { imageSizing: "invalid", fontScale: value } }));
+			const config = await loadConfig(agent, cwd, false);
+			assert.equal(config.fontScale, 1);
+			assert.equal(config.imageSizing, "pixels");
+		}
+	} finally { await rm(root, { recursive: true, force: true }); }
+});
 test("alignment defaults to left; invalid values cannot inject terminal controls", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "rich-align-config-"));
 	try {

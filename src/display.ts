@@ -1,9 +1,9 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { allocateImageId, getCapabilities, getCellDimensions, getImageDimensions, renderImage } from "@earendil-works/pi-tui";
 import { cacheKey } from "./cache.ts";
-import { DISPLAY_DPI, type ImageAlign } from "./config.ts";
+import type { ImageAlign } from "./config.ts";
 import { splitMath } from "./math.ts";
-import { formulaLayout, padFormula } from "./image-layout.ts";
+import { formulaLayout, formulaScale, padFormula, PIXEL_SIZING, type Sizing } from "./image-layout.ts";
 
 export type Palette = Pick<Theme, "appearance" | "getFgAnsi">;
 export function foreground(theme: Palette): string {
@@ -48,7 +48,7 @@ export class DisplayStore {
 			this.entries.delete(oldest);
 		}
 	}
-	transform(markdown: string, width: number, theme: Palette, scale: number, dpi: number, align: ImageAlign = "left", outputPad: 0 | 1 = 0): string {
+	transform(markdown: string, width: number, theme: Palette, scale: number, dpi: number, align: ImageAlign = "left", outputPad: 0 | 1 = 0, sizing: Sizing = PIXEL_SIZING): string {
 		if (getCapabilities().images !== "kitty" || width < 2 || markdown.length > 100000) return markdown;
 		const fg = foreground(theme);
 		return splitMath(markdown).map((segment) => {
@@ -59,9 +59,7 @@ export class DisplayStore {
 			const dimensions = getImageDimensions(prepared.png, "image/png");
 			if (!dimensions) return segment.source;
 			const cell = getCellDimensions();
-			// DPI controls sampling quality, not terminal size. Keep imageScale in
-			// 180-DPI logical pixels so higher-resolution PNGs do not grow on screen.
-			const displayScale = scale * DISPLAY_DPI / dpi;
+			const displayScale = formulaScale(cell, dpi, scale, sizing);
 			const layout = formulaLayout(dimensions, cell, Math.max(1, width - 2), displayScale);
 			if (!layout) return segment.source;
 			const layoutKey = `${key}:${layout.widthPx}:${layout.heightPx}`;

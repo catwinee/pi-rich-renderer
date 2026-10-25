@@ -4,7 +4,10 @@ import { join } from "node:path";
 // Preserve the original 180-DPI display size while raster quality changes.
 export const DISPLAY_DPI = 180;
 export type ImageAlign = "left" | "center";
+export type ImageSizing = "pixels" | "font";
 export interface Config {
+	imageSizing: ImageSizing;
+	fontScale: number;
 	imageScale: number;
 	imageAlign: ImageAlign;
 	outputPad: 0 | 1;
@@ -31,6 +34,9 @@ export async function loadConfig(agentDir: string, cwd: string, trusted: boolean
 	const options = { ...object(global.richRenderer), ...object(project.richRenderer) };
 	const terminal = { ...object(global.terminal), ...object(project.terminal) };
 	return {
+		// Opt in explicitly: existing imageScale settings retain their old meaning.
+		imageSizing: options.imageSizing === "font" ? "font" : "pixels",
+		fontScale: bounded(options.fontScale, 1, 0.5, 2),
 		imageScale: bounded(options.imageScale, 0.5, 0.1, 2),
 		imageAlign: options.imageAlign === "center" ? "center" : "left",
 		outputPad: (project.outputPad ?? global.outputPad) === 0 ? 0 : 1,

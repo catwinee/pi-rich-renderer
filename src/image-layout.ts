@@ -1,5 +1,20 @@
 import { PNG } from "pngjs";
 import type { CellDimensions, ImageDimensions } from "@earendil-works/pi-tui";
+import { DISPLAY_DPI, type Config } from "./config.ts";
+import { LATEX_FONT_PT } from "./math.ts";
+
+export type Sizing = Pick<Config, "imageSizing" | "fontScale">;
+export const PIXEL_SIZING: Sizing = { imageSizing: "pixels", fontScale: 1 };
+
+/** Font mode maps a TeX em (not the whole formula's height) to a terminal row.
+ * Fractions/matrices retain their natural extra height; DPI affects sampling only.
+ * A uniform change in reported pixel density cancels out of cell placement.
+ */
+export function formulaScale(cell: CellDimensions, dpi: number, imageScale: number, sizing: Sizing): number {
+	return sizing.imageSizing === "font"
+		? sizing.fontScale * cell.heightPx * 72.27 / (LATEX_FONT_PT * dpi)
+		: imageScale * DISPLAY_DPI / dpi;
+}
 
 const MAX_SIDE = 8192;
 const MAX_PIXELS = 16_000_000;
