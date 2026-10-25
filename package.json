@@ -16,6 +16,7 @@
     "@earendil-works/pi-tui": "1.1.0",
     "typescript": "^5.7.3",
     "@types/node": "^24.3.0",
+    "@types/pngjs": "6.0.5",
     "tsx": "^4.20.0"
   },
   "overrides": {
@@ -28,5 +29,8 @@
     "test": "tsx --test test/*.test.ts",
     "test:integration": "PI_RICH_TEST_TEX=1 tsx --test test/*.test.ts",
     "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "pngjs": "7.0.0"
   }
 }

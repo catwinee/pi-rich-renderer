@@ -31,7 +31,8 @@ cd ~/Workspace/pi-rich-renderer
 pi -e ./index.ts
 ```
 
-Pi supplies the runtime packages; no production dependency installation is needed.
+Pi supplies its host packages. Install the PNG-padding dependency with
+`npm ci --omit=dev --ignore-scripts` before using a fresh checkout.
 To keep it enabled, add the absolute path to the existing `extensions` array in
 `~/.pi/agent/settings.json` (do not replace your other entries):
 
@@ -83,8 +84,8 @@ Project paths resolve from the current session's working directory.
   Centering uses the actual rendered image width and the current Pi pane's
   available content width, respecting Pi's `outputPad` setting. It recalculates
   on resize and moves the whole formula, preserving internal equation alignment.
-  It changes terminal placement only: no transparent PNG padding, image resizing,
-  cache invalidation or extra TeX compilation. Centering is cell-aligned, so left
+  The alignment setting changes terminal placement only, not formula scale or
+  TeX compilation. Centering is cell-aligned, so left
   and right margins can differ by one terminal column.
 - `cacheTtlMs`: 0–31536000000, default 7 days; 0 disables age-based pruning.
 - `terminal.showImages: false` also disables this extension's images.
@@ -102,6 +103,14 @@ This is a manually selected preset, not connector detection. TODO (only eDP):
 calibrate external-monitor scaling separately before adding display-aware profiles.
 Reload after applying it; terminal font size/cell metrics still affect the result.
 
+Short formulas are fitted uniformly, then surrounded by transparent PNG padding
+to fill the reserved character cells. The unused height of a terminal row must
+not stretch the formula vertically. Source pixels are preserved; only integer
+PNG/cell rounding remains (especially noticeable for very thin, low-DPI images).
+Padding is generated at display time and cached by canvas size, so resize and
+cell-size changes do not require recompiling TeX or clearing the disk cache.
+After updating this extension, run `/reload` in each Pi session to use the fix.
+
 Raising DPI from 180 to 300 gives roughly 2.78× the raw pixel count, **not**
 necessarily 2.78× the rendering time: TeX layout and sandbox startup are largely
 unchanged; rasterization, PNG encoding and transfer do grow. PNG compression,
@@ -117,7 +126,10 @@ who relied on that behavior should adjust `imageScale` explicitly.
 - 15-second total preparation budget per message, with cancellation on abort/shutdown.
 - CPU, address-space, file-size, descriptor and process-output limits for subprocesses.
 - PNGs: at most 2 MiB, 8192 pixels per side and 16 million pixels total.
-- Memory cache: at most 64 formulas / 8 MiB of base64 payload.
+- Memory cache: at most 64 formulas / 8 MiB of base64 payload, plus a separate
+  bounded 64-entry / 8 MiB cache for padded display PNGs.
+- Padded PNGs obey the same size/pixel limits. Corrupt PNGs or extreme aspect
+  ratios that need excessive padding fall back to Pi's ordinary math rendering.
 - Disk cache: `<agent-dir>/cache/rich-renderer-v2/`; private directories/files,
   atomic writes, validation on read, and no symlink reads.
 - At TUI session start, remove expired PNGs and prune to 64 MiB. The disk cache

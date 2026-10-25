@@ -3,6 +3,7 @@ import { allocateImageId, getCapabilities, getCellDimensions, getImageDimensions
 import { cacheKey } from "./cache.ts";
 import { DISPLAY_DPI, type ImageAlign } from "./config.ts";
 import { splitMath } from "./math.ts";
+import { formulaLayout, padFormula } from "./image-layout.ts";
 
 export type Palette = Pick<Theme, "appearance" | "getFgAnsi">;
 export function foreground(theme: Palette): string {
@@ -28,9 +29,14 @@ interface Prepared { png: string; bytes: number }
 export class DisplayStore {
 	private entries = new Map<string, Prepared>();
 	private bytes = 0;
-	clear(): void { this.entries.clear(); this.bytes = 0; }
+	private layouts = new Map<string, string | undefined>();
+	private layoutBytes = 0;
+	clear(): void { this.entries.clear(); this.bytes = 0; this.layouts.clear(); this.layoutBytes = 0; }
 	has(key: string): boolean { return this.entries.has(key); }
 	put(key: string, png: Buffer): void {
+		// A replacement source must not reuse a padded version of the old PNG.
+		this.layouts.clear();
+		this.layoutBytes = 0;
 		this.bytes -= this.entries.get(key)?.bytes ?? 0;
 		this.entries.delete(key);
 		const base64 = png.toString("base64");
@@ -56,12 +62,26 @@ export class DisplayStore {
 			// DPI controls sampling quality, not terminal size. Keep imageScale in
 			// 180-DPI logical pixels so higher-resolution PNGs do not grow on screen.
 			const displayScale = scale * DISPLAY_DPI / dpi;
-			// Markdown already caches output by width. Allocate a distinct placement per
-			// occurrence rather than sharing one Kitty image ID across the transcript.
-			const image = renderImage(prepared.png, dimensions, {
-				// Match Image.render's two-column width allowance to preserve sizing.
-				maxWidthCells: Math.max(1, Math.min(width - 2, Math.ceil(dimensions.widthPx / cell.widthPx * displayScale))),
-				maxHeightCells: Math.max(1, Math.min(40, Math.ceil(dimensions.heightPx / cell.heightPx * displayScale))),
+			const layout = formulaLayout(dimensions, cell, Math.max(1, width - 2), displayScale);
+			if (!layout) return segment.source;
+			const layoutKey = `${key}:${layout.widthPx}:${layout.heightPx}`;
+			if (!this.layouts.has(layoutKey)) {
+				const padded = padFormula(prepared.png, dimensions, layout);
+				this.layouts.set(layoutKey, padded);
+				this.layoutBytes += padded?.length ?? 0;
+				while (this.layouts.size > 64 || this.layoutBytes > 8 * 1024 * 1024) {
+					const oldest = this.layouts.keys().next().value!;
+					this.layoutBytes -= this.layouts.get(oldest)?.length ?? 0;
+					this.layouts.delete(oldest);
+				}
+			}
+			const padded = this.layouts.get(layoutKey);
+			if (!padded) return segment.source;
+			// Pass the padded dimensions through Pi's public API so fullscreen clipping
+			// and placement-only redraw also use the correct source coordinates.
+			const image = renderImage(padded, layout, {
+				maxWidthCells: layout.columns,
+				maxHeightCells: layout.rows,
 				imageId: allocateImageId(),
 				moveCursor: false,
 			});

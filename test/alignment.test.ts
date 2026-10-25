@@ -8,16 +8,14 @@ import { cropKittyImageLine, getKittyImagePlacement } from "../node_modules/@ear
 import { cacheKey } from "../src/cache.ts";
 import { DisplayStore, foreground, type Palette } from "../src/display.ts";
 import type { ImageAlign } from "../src/config.ts";
+import { fixturePng } from "./png-fixture.ts";
 
 const theme: Palette = { appearance: "dark", getFgAnsi: () => "\x1b[38;2;230;237;243m" };
 const source = "Before\n\n$$x$$\n\nAfter";
 function setup(widthPx = 600, heightPx = 300, chunked = false): DisplayStore {
 	initTheme("dark", false);
 	setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
-	// Synthetic dimensions/payload only; never sent to a physical terminal.
-	let png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=", "base64");
-	png.writeUInt32BE(widthPx, 16); png.writeUInt32BE(heightPx, 20);
-	if (chunked) png = Buffer.concat([png, Buffer.alloc(9000, 1)]);
+	const png = fixturePng(widthPx, heightPx, chunked);
 	const store = new DisplayStore();
 	store.put(cacheKey("$$x$$", foreground(theme), 180), png);
 	return store;
