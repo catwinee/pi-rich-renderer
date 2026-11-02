@@ -159,9 +159,10 @@ who relied on that behavior should adjust `imageScale` in pixel mode or
 
 ## Bounds and cache
 
-- At most 12 distinct formulas per message, 8192 characters per formula.
+- At most 48 distinct formulas per message, 8192 characters per formula.
 - Messages over 100000 characters are left to Pi.
-- 15-second total preparation budget per message, with cancellation on abort/shutdown.
+- 60-second total preparation budget per message, with cancellation on abort/shutdown.
+  This is an upper bound, not a fixed delay; cached or simple formulas finish sooner.
 - CPU, address-space, file-size, descriptor and process-output limits for subprocesses.
 - PNGs: at most 2 MiB, 8192 pixels per side and 16 million pixels total.
 - Memory cache: at most 64 formulas / 8 MiB of base64 payload, plus a separate

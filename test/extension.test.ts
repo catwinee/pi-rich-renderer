@@ -58,6 +58,14 @@ test("extension registers display-only hooks and leaves messages untouched in ev
 			assert.equal(state.transformer!("$$x$$", { messageType: "user", isStreaming: false, availableWidth: 80 }), "$$x$$");
 			assert.equal(state.transformer!("$$x$$", { messageType: "assistant", isStreaming: true, availableWidth: 80 }), "$$x$$");
 			if (render) {
+				const formulas = Array.from({ length: 49 }, (_, i) => `$$x_{${i}}$$`);
+				const many = { role: "assistant", stopReason: "stop", content: [{ type: "text", text: formulas.join("\n\n") }] };
+				await handlers.get("message_end")!({ message: many }, ctx);
+				for (const formula of formulas.slice(0, 48)) {
+					assert.ok(state.transformer!(formula, { messageType: "assistant", isStreaming: false, availableWidth: 80 }).includes("\x1b_G"), `expected image for ${formula}`);
+				}
+				assert.equal(state.transformer!(formulas[48], { messageType: "assistant", isStreaming: false, availableWidth: 80 }), formulas[48], "49th distinct formula stays within the preparation bound");
+				assert.deepEqual(notices, []);
 				const bad = Object.freeze({ role: "assistant", stopReason: "stop", content: Object.freeze([
 					Object.freeze({ type: "text", text: String.raw`$$\notARealCommand$$` }),
 				]) });

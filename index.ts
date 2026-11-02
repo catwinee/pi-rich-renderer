@@ -46,10 +46,10 @@ export default function (pi: ExtensionAPI) {
 		for (const text of texts) {
 			if (text.length > 100000) continue;
 			for (const segment of splitMath(text)) {
-				if (segment.type === "math" && segment.source.length <= 8192 && sources.size < 12) sources.add(segment.source);
+				if (segment.type === "math" && segment.source.length <= 8192 && sources.size < 48) sources.add(segment.source);
 			}
 		}
-		const signal = AbortSignal.any([lifecycle.signal, AbortSignal.timeout(15000), ...(ctx.signal ? [ctx.signal] : [])]);
+		const signal = AbortSignal.any([lifecycle.signal, AbortSignal.timeout(60000), ...(ctx.signal ? [ctx.signal] : [])]);
 		for (const source of sources) {
 			if (signal.aborted) break;
 			const key = cacheKey(source, fg, current.dpi);
